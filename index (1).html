@@ -1,0 +1,806 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Feedback Paths: a Stanford research project on how English learners engage with peer and AI feedback, and how that feedback becomes revision.">
+<style>
+html{color-scheme:light}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;font-size:14px;font-family:system-ui,-apple-system,sans-serif}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+<title>Feedback Paths</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap">
+<style>
+/* Layout concept: a calm research product page on a pale yellow-green ground. Each section takes a different green tone so neighbours never match; one deep-green band holds the analytic method. Motion is used where it explains something: revisions being written, the pipeline filling, support fading. */
+:root{
+  --base:#F2F7E1; --cream:#FBFCEF; --sage:#E4EECB; --mint:#DCEBDD; --paper:#FFFFFF;
+  --ink:#13211A; --muted:#55665C; --line:#D3DEC3;
+  --accent:#1F5C4F; --on-accent:#FFFFFF; --lime:#B9D46A; --accent-soft:#D7E8CF;
+  --band:#1F4F44; --band-ink:#F1F7EE; --band-muted:#B6D1C4; --band-panel:#2A6155;
+  --c-ack:#768379; --c-diff:#A9760E; --c-reason:#2860C4; --c-eval:#7343AE;
+  --ins:#14785A; --ins-bg:#CFEEDC; --del:#B42430; --del-bg:#FADFE1;
+  --ph:#8A5300; --ph-bg:#FFEDC2;
+  --f:"Inter", "Helvetica Neue", Arial, sans-serif;
+  --m:"JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --base:#0F1812; --cream:#131E17; --sage:#17251B; --mint:#112019; --paper:#1C2B22;
+  --ink:#E6EFE6; --muted:#9CB0A3; --line:#2B3A30;
+  --accent:#86D0B7; --on-accent:#0F1812; --lime:#7E9A35; --accent-soft:#1E3A2F;
+  --band:#143A31; --band-ink:#EAF5EF; --band-muted:#9CC5B5; --band-panel:#1C4A3F;
+  --c-ack:#9DAAA0; --c-diff:#E2B04A; --c-reason:#83ACF2; --c-eval:#BB96EA;
+  --ins:#66CEA2; --ins-bg:#163628; --del:#F2878F; --del-bg:#3D1C20;
+  --ph:#F3C46E; --ph-bg:#3B2E12; color-scheme:dark; } }
+:root[data-theme="dark"]{
+  --base:#0F1812; --cream:#131E17; --sage:#17251B; --mint:#112019; --paper:#1C2B22;
+  --ink:#E6EFE6; --muted:#9CB0A3; --line:#2B3A30;
+  --accent:#86D0B7; --on-accent:#0F1812; --lime:#7E9A35; --accent-soft:#1E3A2F;
+  --band:#143A31; --band-ink:#EAF5EF; --band-muted:#9CC5B5; --band-panel:#1C4A3F;
+  --c-ack:#9DAAA0; --c-diff:#E2B04A; --c-reason:#83ACF2; --c-eval:#BB96EA;
+  --ins:#66CEA2; --ins-bg:#163628; --del:#F2878F; --del-bg:#3D1C20;
+  --ph:#F3C46E; --ph-bg:#3B2E12; color-scheme:dark; }
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--base); color:var(--ink); font-family:var(--f); font-size:16px; line-height:1.6}
+h1,h2,h3{margin:0; line-height:1.15; text-wrap:balance; letter-spacing:-0.02em}
+p{margin:0}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.pad{padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px))}
+.wrap{max-width:1080px; margin:0 auto}
+.ph{color:var(--ph); background:var(--ph-bg); border-bottom:1px dashed var(--ph); padding:0 .25em; border-radius:3px}
+
+/* section tones: neighbours always differ */
+section{padding-block:96px; background:var(--sec); position:relative}
+.t-base{--sec:var(--base); --card:var(--paper); --inner:var(--base)}
+.t-cream{--sec:var(--cream); --card:var(--sage); --inner:var(--cream)}
+.t-sage{--sec:var(--sage); --card:var(--paper); --inner:var(--sage)}
+.t-mint{--sec:var(--mint); --card:var(--paper); --inner:var(--mint)}
+@media (max-width: 700px){ section{padding-block:64px} }
+
+/* nav */
+body::before{content:""; position:fixed; inset:0 0 auto; height:env(safe-area-inset-top, 0px); z-index:10; background:var(--base)}
+.nav{position:sticky; top:env(safe-area-inset-top, 0px); z-index:5; background:color-mix(in srgb, var(--base) 88%, transparent); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border-bottom:1px solid transparent; transition:border-color .3s, box-shadow .3s}
+.nav.scrolled{border-color:var(--line); box-shadow:0 6px 24px -18px rgba(20,40,30,.5)}
+.nav .wrap{display:flex; justify-content:space-between; align-items:center; gap:16px; padding-block:14px}
+.brand{font-weight:800; font-size:1.02rem; color:var(--ink); text-decoration:none; display:flex; align-items:center; gap:8px}
+.brand i{display:inline-flex; gap:2px}
+.brand i b{width:4px; height:14px; border-radius:2px; display:block}
+.navlinks{display:flex; align-items:center; gap:22px}
+.navlinks a.l{color:var(--muted); text-decoration:none; font-size:.92rem; font-weight:500; position:relative; padding-block:4px}
+.navlinks a.l::after{content:""; position:absolute; left:0; right:0; bottom:-2px; height:2px; background:var(--accent); transform:scaleX(0); transform-origin:left; transition:transform .35s ease}
+.navlinks a.l:hover, .navlinks a.l.on{color:var(--ink)}
+.navlinks a.l.on::after{transform:scaleX(1)}
+@media (max-width: 760px){ .navlinks a.l{display:none} }
+.progress{position:absolute; left:0; bottom:-1px; height:2px; width:100%; background:linear-gradient(90deg, var(--lime), var(--accent)); transform-origin:left; transform:scaleX(0)}
+
+.btn{display:inline-flex; align-items:center; gap:8px; font-family:var(--f); font-weight:600; font-size:.92rem; padding:10px 16px; border-radius:10px; text-decoration:none; border:1.5px solid var(--accent); cursor:pointer; transition:transform .2s ease, box-shadow .2s ease, background .2s}
+.btn.solid{background:var(--accent); color:var(--on-accent)}
+.btn.line{background:transparent; color:var(--accent)}
+.btn:hover{transform:translateY(-2px); box-shadow:0 10px 22px -14px var(--accent)}
+.btn .arr{transition:transform .2s}
+.btn:hover .arr{transform:translateX(3px)}
+
+/* heads */
+.eyebrow{font-size:.74rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--accent)}
+.head{text-align:center; max-width:660px; margin:0 auto 44px; display:grid; gap:12px}
+.head h2{font-size:clamp(1.7rem, 3.4vw, 2.35rem); font-weight:700}
+.head p{color:var(--muted); font-size:1.05rem}
+
+/* hero */
+.hero{padding-block:76px 96px; overflow:hidden}
+.blob{position:absolute; border-radius:50%; filter:blur(60px); opacity:.55; pointer-events:none; z-index:0}
+.blob.a{width:420px; height:420px; background:var(--lime); top:-120px; right:-80px; animation:drift 18s ease-in-out infinite alternate}
+.blob.b{width:340px; height:340px; background:var(--accent-soft); bottom:-140px; left:-60px; animation:drift 22s ease-in-out infinite alternate-reverse}
+@keyframes drift{ from{transform:translate(0,0) scale(1)} to{transform:translate(-60px,40px) scale(1.12)} }
+.hero .wrap{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:56px; align-items:center; position:relative; z-index:1}
+.hero h1{font-size:clamp(2.3rem, 5vw, 3.5rem); font-weight:800; margin-top:14px}
+.hero h1 .hl{background:linear-gradient(transparent 62%, var(--lime) 62%); background-size:100% 100%; background-repeat:no-repeat}
+.hero .sub{color:var(--muted); font-size:1.12rem; margin-top:18px; max-width:46ch}
+.hero .ctas{display:flex; gap:12px; flex-wrap:wrap; margin-top:30px}
+@media (max-width: 900px){ .hero .wrap{grid-template-columns:minmax(0,1fr); gap:40px} }
+
+/* specimen */
+.spec{background:var(--paper); border-radius:18px; padding:22px; display:grid; gap:14px; box-shadow:0 30px 60px -40px rgba(20,60,40,.45); transform-style:preserve-3d; transition:transform .25s ease}
+.spec .top{display:flex; justify-content:space-between; align-items:center; gap:10px}
+.lbl{font-size:.7rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
+.autoplay{font-family:var(--f); font-size:.72rem; font-weight:600; color:var(--accent); background:var(--accent-soft); border:0; border-radius:999px; padding:4px 10px; cursor:pointer}
+.msg{background:var(--base); border-radius:12px; padding:12px 14px; font-size:.95rem; line-height:1.5}
+.msg .lbl{display:block; margin-bottom:4px}
+.picks{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+.pick{position:relative; overflow:hidden; font-family:var(--f); font-size:.86rem; text-align:left; line-height:1.35; color:var(--ink); background:var(--base); border:1.5px solid transparent; border-radius:12px; padding:10px 12px; cursor:pointer; transition:transform .2s, border-color .2s}
+.pick:hover{transform:translateY(-2px)}
+.pick[aria-selected="true"]{border-color:var(--cur); background:var(--paper)}
+.pick .timer{position:absolute; left:0; bottom:0; height:3px; width:100%; background:var(--cur); transform:scaleX(0); transform-origin:left}
+.code{display:inline-flex; align-items:center; gap:6px; font-family:var(--m); font-size:.7rem; font-weight:600; letter-spacing:.04em; color:var(--cur)}
+.code::before{content:""; width:8px; height:8px; border-radius:50%; background:currentColor}
+ins{background:linear-gradient(var(--ins-bg), var(--ins-bg)) no-repeat left / 100% 100%; color:var(--ins); text-decoration:none; padding:0 3px; border-radius:3px}
+del{text-decoration:none; color:var(--del); background:linear-gradient(var(--del), var(--del)) no-repeat left center / 100% 1.5px, var(--del-bg); padding:0 3px; border-radius:3px}
+.animate ins{animation:sweep .7s ease .35s both}
+.animate del{animation:strike .5s ease .05s both}
+@keyframes sweep{ from{background-size:0% 100%} to{background-size:100% 100%} }
+@keyframes strike{ from{background-size:0% 1.5px, 100% 100%} to{background-size:100% 1.5px, 100% 100%} }
+.outcome{display:flex; flex-wrap:wrap; gap:6px}
+.tag{font-size:.76rem; font-weight:600; padding:4px 10px; border-radius:999px; background:var(--inner, var(--base)); color:var(--muted)}
+.tag b{color:var(--ink); font-weight:600}
+.animate .tag{animation:pop .4s ease both}
+.animate .tag:nth-child(2){animation-delay:.12s} .animate .tag:nth-child(3){animation-delay:.24s}
+@keyframes pop{ from{transform:scale(.85); opacity:.2} to{transform:none; opacity:1} }
+@media (max-width: 480px){ .picks{grid-template-columns:1fr} }
+
+/* cards */
+.grid3{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:18px}
+.grid4{display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:18px}
+.card{position:relative; overflow:hidden; background:var(--card); border-radius:16px; padding:24px; display:grid; gap:8px; align-content:start; transition:transform .25s ease, box-shadow .25s ease; isolation:isolate}
+.card::after{content:""; position:absolute; inset:0; z-index:-1; background:radial-gradient(260px circle at var(--mx,50%) var(--my,50%), color-mix(in srgb, var(--lime) 40%, transparent), transparent 70%); opacity:0; transition:opacity .3s}
+.card:hover{transform:translateY(-4px); box-shadow:0 22px 40px -30px rgba(20,60,40,.55)}
+.card:hover::after{opacity:1}
+.card .bar{width:22px; height:3px; border-radius:2px; background:var(--accent); margin-bottom:6px; transition:width .35s ease}
+.card:hover .bar{width:44px}
+.card h3{font-size:1.05rem; font-weight:700}
+.card p{color:var(--muted); font-size:.95rem; line-height:1.5}
+.num{font-size:.76rem; font-weight:700; color:var(--accent); letter-spacing:.07em}
+.card ul{margin:4px 0 0; padding-left:1.1em; color:var(--muted); font-size:.94rem; display:grid; gap:6px}
+@media (max-width: 900px){ .grid4{grid-template-columns:repeat(2, minmax(0,1fr))} }
+@media (max-width: 760px){ .grid3{grid-template-columns:minmax(0,1fr)} }
+@media (max-width: 480px){ .grid4{grid-template-columns:minmax(0,1fr)} }
+.how{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px}
+.how a{font-size:.76rem; font-weight:600; text-decoration:none; padding:4px 10px; border-radius:999px; background:var(--accent-soft); color:var(--accent); transition:background .2s, color .2s}
+.how a:hover{background:var(--accent); color:var(--on-accent)}
+.lanes{display:grid; gap:6px; margin-top:4px}
+.lane{font-size:.86rem; font-weight:600; padding:6px 10px; border-radius:8px; background:var(--inner)}
+.lane span{color:var(--muted); font-weight:500}
+
+/* method band */
+.band{--sec:var(--band); color:var(--band-ink); overflow:hidden}
+.band .eyebrow{color:var(--lime)}
+.band .head p{color:var(--band-muted)}
+.pipeline{position:relative; display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:0; margin-bottom:40px}
+.track{position:absolute; top:17px; left:17px; right:17px; height:2px; background:color-mix(in srgb, var(--band-muted) 35%, transparent)}
+.track i{position:absolute; inset:0; background:var(--lime); transform-origin:left; transform:scaleX(1)}
+q{quotes:none}
+.pstep{position:relative; padding-right:14px; display:grid; gap:6px; align-content:start; align-self:start; cursor:pointer; background:none; border:0; text-align:left; color:inherit; font:inherit}
+.pstep .dot{width:34px; height:34px; border-radius:50%; background:var(--band-ink); color:var(--band); font-weight:800; display:grid; place-items:center; font-size:.9rem; position:relative; z-index:1; transition:transform .25s, background .25s, box-shadow .25s}
+.pstep:hover .dot, .pstep.on .dot{transform:scale(1.15); background:var(--lime); box-shadow:0 0 0 6px color-mix(in srgb, var(--lime) 25%, transparent)}
+.pstep h3{font-size:1.02rem; margin-top:8px}
+.pstep p{color:var(--band-muted); font-size:.9rem; line-height:1.45}
+@media (max-width: 820px){ .pipeline{grid-template-columns:repeat(2, minmax(0,1fr)); row-gap:24px} .track{display:none} }
+@media (max-width: 420px){ .pipeline{grid-template-columns:minmax(0,1fr)} }
+.panels{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:18px}
+.panel{background:var(--band-panel); border-radius:16px; padding:24px; display:grid; gap:14px; align-content:start; outline:2px solid transparent; outline-offset:3px; transition:outline-color .3s, transform .3s}
+.panel.flash{outline-color:var(--lime); transform:translateY(-3px)}
+.panel.wide{grid-column:1 / -1}
+.ptitle{display:flex; align-items:baseline; gap:10px}
+.ptitle span{font-family:var(--m); font-size:.75rem; color:var(--lime)}
+.panel h3{font-size:1.1rem}
+.note{color:var(--band-muted); font-size:.9rem; line-height:1.45}
+@media (max-width: 820px){ .panels{grid-template-columns:minmax(0,1fr)} }
+.codes{display:grid; gap:8px}
+.crow{display:grid; grid-template-columns:96px minmax(0,1fr) auto; gap:10px; align-items:center; background:var(--paper); color:var(--ink); border-radius:10px; padding:9px 12px; font-size:.88rem; border:0; font-family:var(--f); text-align:left; cursor:pointer; transition:transform .2s}
+.crow:hover{transform:translateX(4px)}
+.crow q{font-style:italic; color:var(--muted)}
+.crow small{font-size:.72rem; color:var(--muted); font-weight:600}
+@media (max-width: 480px){ .crow{grid-template-columns:1fr} }
+.metrics{display:flex; flex-wrap:wrap; gap:8px}
+.metric{background:var(--paper); color:var(--ink); border-radius:999px; padding:6px 12px; font-size:.82rem; font-weight:600}
+.vflow{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px}
+.vflow div{background:var(--paper); color:var(--ink); border-radius:10px; padding:10px; font-size:.84rem; line-height:1.35}
+.vflow b{display:block; font-size:.72rem; letter-spacing:.06em; text-transform:uppercase; color:var(--accent); margin-bottom:2px}
+@media (max-width: 480px){ .vflow{grid-template-columns:1fr} }
+.matrix{display:grid; grid-template-columns:auto 1fr 1fr; gap:6px; font-size:.84rem}
+.matrix .h{color:var(--band-muted); font-size:.7rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; padding:4px 6px; align-self:end}
+.matrix .rh{color:var(--band-ink); font-weight:600; align-self:center; padding:4px 6px}
+.cell{background:var(--paper); color:var(--ink); border:0; border-radius:8px; padding:9px 10px; line-height:1.35; font:inherit; font-size:.84rem; text-align:left; cursor:pointer; transition:transform .2s, box-shadow .2s}
+.cell.good{box-shadow:inset 3px 0 0 var(--ins)} .cell.warn{box-shadow:inset 3px 0 0 var(--c-diff)}
+.cell:hover, .cell[aria-pressed="true"]{transform:translateY(-2px)}
+.cell[aria-pressed="true"]{outline:2px solid var(--lime)}
+.cols3{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px}
+.cols3 > div{background:var(--paper); color:var(--ink); border-radius:12px; padding:14px; display:grid; gap:8px; align-content:start}
+.cols3 b{font-size:.72rem; letter-spacing:.06em; text-transform:uppercase; color:var(--accent)}
+.pair{display:grid; grid-template-columns:1fr 1fr; gap:6px}
+.pair span{background:var(--base); border-radius:8px; padding:8px; font-size:.82rem; line-height:1.3}
+.pair span i{display:block; font-style:normal; font-weight:700; color:var(--ink)}
+.mini{display:flex; flex-wrap:wrap; gap:5px}
+.mini span{font-size:.74rem; padding:3px 8px; border-radius:999px; background:var(--base); color:var(--muted); font-weight:600}
+@media (max-width: 760px){ .cols3{grid-template-columns:minmax(0,1fr)} }
+
+/* dashboard */
+.dash{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:18px}
+.dcard{background:var(--card); border-radius:16px; padding:22px; display:grid; gap:12px; align-content:start; transition:transform .25s, box-shadow .25s}
+.dcard:hover{transform:translateY(-4px); box-shadow:0 22px 40px -30px rgba(20,60,40,.55)}
+.dcard h3{font-size:1.05rem}
+.dcard p{color:var(--muted); font-size:.92rem; line-height:1.45}
+.viz{background:var(--inner); border-radius:12px; padding:12px; display:grid; gap:8px; font-size:.78rem}
+.hbar{display:grid; grid-template-columns:96px 1fr 34px; gap:8px; align-items:center}
+.hbar .t{height:8px; border-radius:4px; background:color-mix(in srgb, var(--accent) 14%, transparent); overflow:hidden}
+.hbar .t i{display:block; height:100%; border-radius:4px; background:linear-gradient(90deg, var(--lime), var(--accent)); width:var(--v); transform-origin:left}
+.hbar .val{font-variant-numeric:tabular-nums; color:var(--muted); text-align:right}
+.viz svg{width:100%; height:auto; display:block}
+.journey{display:flex; flex-wrap:wrap; gap:4px; align-items:center}
+.journey span{background:var(--card); border-radius:6px; padding:4px 7px; font-weight:600; transition:background .3s, color .3s}
+.journey span.lit{background:var(--accent); color:var(--on-accent)}
+.journey em{font-style:normal; color:var(--muted)}
+.viz q{font-style:italic; color:var(--muted)}
+.vizcap{font-size:.7rem; color:var(--muted); letter-spacing:.04em}
+.principles{display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin-top:28px}
+.principles span{font-size:.84rem; font-weight:600; padding:7px 14px; border-radius:999px; border:1px solid var(--line); background:color-mix(in srgb, var(--paper) 50%, transparent)}
+@media (max-width: 860px){ .dash{grid-template-columns:minmax(0,1fr)} }
+
+/* scaffolding simulator */
+.sim{display:grid; grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr); gap:28px; align-items:start; max-width:960px; margin:0 auto}
+.controls{background:var(--card); border-radius:16px; padding:22px; display:grid; gap:16px}
+.controls label{font-size:.86rem; font-weight:600}
+.controls output{font-family:var(--m); font-weight:600; color:var(--accent)}
+input[type="range"]{width:100%; accent-color:var(--accent)}
+.check{display:flex; gap:10px; align-items:center; font-size:.9rem}
+.check input{width:18px; height:18px; accent-color:var(--accent)}
+.decision{background:var(--inner); border-radius:12px; padding:12px 14px; font-size:.9rem; line-height:1.45; min-height:72px}
+.decision b{color:var(--accent)}
+.ladder{display:grid; gap:8px}
+.rung{display:grid; grid-template-columns:40px minmax(0,1fr); gap:12px; align-items:center; transition:transform .3s}
+.rung b{font-family:var(--m); font-size:.8rem; color:var(--muted); transition:color .3s}
+.rung div{background:var(--card); border-radius:10px; padding:10px 14px; font-size:.92rem; position:relative; overflow:hidden; transition:box-shadow .3s}
+.rung div::before{content:""; position:absolute; inset:0 auto 0 0; width:var(--w); background:var(--accent-soft); transition:width .5s ease}
+.rung div span{position:relative}
+.rung div em{color:var(--muted); font-style:normal}
+.rung.on{transform:translateX(6px)}
+.rung.on b{color:var(--accent)}
+.rung.on div{box-shadow:inset 0 0 0 2px var(--accent)}
+.rung.on div::before{background:color-mix(in srgb, var(--lime) 55%, transparent)}
+.rules{display:flex; justify-content:center; gap:10px; flex-wrap:wrap; margin-top:24px}
+.small{font-size:.85rem; color:var(--muted)}
+@media (max-width: 820px){ .sim{grid-template-columns:minmax(0,1fr)} }
+
+/* form */
+.formbox{max-width:640px; margin:56px auto 0; text-align:center; display:grid; gap:10px}
+.formbox h3{font-size:1.5rem}
+.formbox > p{color:var(--muted)}
+form{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px; text-align:left}
+form .full{grid-column:1 / -1}
+form label{display:block; font-size:.82rem; font-weight:600; margin-bottom:4px}
+input:not([type="range"]):not([type="checkbox"]), select, textarea{width:100%; font:inherit; font-size:.95rem; color:var(--ink); background:var(--paper); border:1px solid var(--line); border-radius:10px; padding:10px 12px; transition:border-color .2s, box-shadow .2s}
+input:not([type="range"]):not([type="checkbox"]):focus, select:focus, textarea:focus{border-color:var(--accent); box-shadow:0 0 0 4px var(--accent-soft); outline:none}
+textarea{min-height:80px; resize:vertical}
+@media (max-width: 560px){ form{grid-template-columns:1fr} }
+.result{grid-column:1 / -1; background:var(--paper); border-radius:12px; padding:16px; display:grid; gap:10px}
+.result pre{white-space:pre-wrap; margin:0; font-family:var(--m); font-size:.8rem; background:var(--base); border-radius:8px; padding:12px; max-height:240px; overflow:auto}
+
+/* footer */
+footer{background:var(--sage)}
+footer .wrap{padding-block:40px; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:32px}
+footer h3{font-size:1rem}
+footer p{color:var(--muted); font-size:.9rem; margin-top:6px}
+details{font-size:.86rem; color:var(--muted)}
+summary{cursor:pointer; font-weight:600; color:var(--ink)}
+details ol{padding-left:1.1em; margin:10px 0 0; display:grid; gap:6px}
+.copy{border-top:1px solid var(--line); padding-block:18px; font-size:.8rem; color:var(--muted)}
+@media (max-width: 760px){ footer .wrap{grid-template-columns:minmax(0,1fr)} }
+
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto}
+  *, *::before, *::after{animation:none!important; transition:none!important}
+}
+</style>
+</head>
+<body>
+<header class="nav pad" id="nav">
+  <div class="wrap">
+    <a class="brand" href="#top"><i aria-hidden="true"><b style="background:var(--c-ack)"></b><b style="background:var(--c-diff)"></b><b style="background:var(--c-reason)"></b><b style="background:var(--c-eval)"></b></i>Feedback Paths</a>
+    <div class="navlinks">
+      <a class="l" href="#guiding">Questions</a>
+      <a class="l" href="#method">Method</a>
+      <a class="l" href="#dashboard">Dashboard</a>
+      <a class="l" href="#next">Scaffolding</a>
+      <a class="btn solid" href="#partner">Partner with us</a>
+    </div>
+  </div>
+  <div class="progress" id="progress" aria-hidden="true"></div>
+</header>
+
+<main id="top">
+
+<section class="hero t-base pad">
+  <span class="blob a" aria-hidden="true"></span><span class="blob b" aria-hidden="true"></span>
+  <div class="wrap">
+    <div class="intro">
+      <p class="eyebrow">Research project · Human–AI feedback in L2 writing</p>
+      <h1>How do learners turn <span class="hl">feedback</span> into revision?</h1>
+      <p class="sub">We code how English learners engage with peer and AI feedback, validate the coding against humans, and trace every comment to the revision it shaped.</p>
+      <div class="ctas"><a class="btn solid" href="#partner">Partner with us <span class="arr">→</span></a><a class="btn line" href="#method">See the method</a></div>
+    </div>
+
+    <div class="spec" id="spec" aria-label="Interactive example of a coded feedback exchange">
+      <div class="top"><span class="lbl">Try it · one feedback, four responses</span><button class="autoplay" id="autoplay" type="button" aria-pressed="true">Pause demo</button></div>
+      <div class="msg"><span class="lbl">AI feedback</span>Your paragraph lacks a clear link between the evidence and the claim.</div>
+      <div class="picks" role="tablist" aria-label="Student responses">
+        <button class="pick" role="tab" data-k="ack" aria-selected="true" aria-controls="out"><span class="code">ACK</span><br>“OK, I'll change it.”<span class="timer"></span></button>
+        <button class="pick" role="tab" data-k="diff" aria-selected="false" aria-controls="out"><span class="code">DIFF</span><br>“I don't get why it's unclear.”<span class="timer"></span></button>
+        <button class="pick" role="tab" data-k="reason" aria-selected="false" aria-controls="out"><span class="code">REASON</span><br>“The survey asked teachers, not students…”<span class="timer"></span></button>
+        <button class="pick" role="tab" data-k="eval" aria-selected="false" aria-controls="out"><span class="code">EVAL</span><br>“I disagree, the survey shows it.”<span class="timer"></span></button>
+      </div>
+      <div id="out" role="tabpanel" aria-live="polite" style="display:grid; gap:10px"></div>
+    </div>
+  </div>
+</section>
+
+<section class="t-cream pad" id="gap">
+  <div class="wrap">
+    <div class="head reveal"><p class="eyebrow">The gap</p><h2>Strong theory, little scalable measurement</h2></div>
+    <div class="grid3 stagger">
+      <div class="card"><span class="bar"></span><h3>Engagement is hand-coded</h3><p>L2 feedback-engagement studies rely on small samples and manual coding.</p></div>
+      <div class="card"><span class="bar"></span><h3>Revisions aren't linked to dialogue</h3><p>No fine-grained method ties AI feedback turns to the revisions they shape.</p></div>
+      <div class="card"><span class="bar"></span><h3>Peer vs. AI is rarely compared</h3><p>Few studies compare both sources within the same learners.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="t-sage pad" id="guiding">
+  <div class="wrap">
+    <div class="head reveal"><p class="eyebrow">Guiding questions</p><h2>Three questions drive the project</h2></div>
+    <div class="grid3 stagger">
+      <div class="card"><span class="bar"></span><span class="num">Q1 · SCAFFOLDING</span><h3>How should AI scaffold?</h3><p>Concept explanations, strategy hints and metacognitive prompts matched to each student's difficulty, so they keep reasoning on their own.</p><div class="how"><a href="#next">Adaptive scaffolding</a></div></div>
+      <div class="card"><span class="bar"></span><span class="num">Q2 · INTERACTION</span><h3>How do students interact with AI?</h3><p>What they ask, what help they seek, how the AI responds, and what those patterns reveal about learning needs.</p><div class="how"><a href="#method">Analytic method</a></div></div>
+      <div class="card"><span class="bar"></span><span class="num">Q3 · TEACHERS</span><h3>How can teachers use the analysis?</h3><p>A dashboard that shows where students struggle and which strategies they use.</p><div class="how"><a href="#dashboard">Teacher dashboard</a></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="t-mint pad" id="questions">
+  <div class="wrap">
+    <div class="head reveal"><p class="eyebrow">This master's study</p><h2>Three research questions</h2><p>The study builds the measurement layer the guiding questions depend on.</p></div>
+    <div class="grid3 stagger">
+      <div class="card"><span class="bar"></span><span class="num">RQ1 · MEASUREMENT</span><h3>Can an LLM code engagement reliably?</h3><p>Compared with trained human coders, category by category.</p></div>
+      <div class="card"><span class="bar"></span><span class="num">RQ2 · METHOD</span><h3>How does dialogue become revision?</h3><p>Which comments get taken up, and whether the writing improves.</p></div>
+      <div class="card"><span class="bar"></span><span class="num">RQ3 · EMPIRICAL</span><h3>Peer or AI: what changes?</h3><p>Same learners, same draft, two feedback partners.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="t-cream pad" id="design">
+  <div class="wrap">
+    <div class="head reveal"><p class="eyebrow">Study design</p><h2>One draft, two partners, one revision</h2><p>Feedback order is counterbalanced. About 2–3 lessons.</p></div>
+    <div class="grid4 stagger">
+      <div class="card"><span class="bar"></span><span class="num">STEP 1</span><h3>Draft</h3><p>A task from the existing curriculum.</p></div>
+      <div class="card"><span class="bar"></span><span class="num">STEP 2</span><h3>Two dialogues</h3><div class="lanes"><div class="lane">Peer <span>· classmate</span></div><div class="lane">AI <span>· feedback assistant</span></div></div></div>
+      <div class="card"><span class="bar"></span><span class="num">STEP 3</span><h3>Revise once</h3><p>Take up, adapt, or reject.</p></div>
+      <div class="card"><span class="bar"></span><span class="num">STEP 4</span><h3>Reflect</h3><p>Five minutes: what changed, and why.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="band pad" id="method">
+  <div class="wrap">
+    <div class="head reveal"><p class="eyebrow">Analytic method</p><h2>From interaction traces to validated evidence</h2><p>The LLM reads and labels. Theory, human coders and explicit rules decide what counts. Click a step to jump to it.</p></div>
+
+    <div class="pipeline" id="pipeline" aria-label="Five-stage analytic pipeline">
+      <div class="track" aria-hidden="true"><i id="track"></i></div>
+      <button class="pstep" type="button" data-p="p1"><span class="dot">1</span><h3>Code</h3><p>Sequence-aware engagement codes</p></button>
+      <button class="pstep" type="button" data-p="p2"><span class="dot">2</span><h3>Validate</h3><p>Humans first, then the LLM</p></button>
+      <button class="pstep" type="button" data-p="p3"><span class="dot">3</span><h3>Align</h3><p>Link feedback to revisions</p></button>
+      <button class="pstep" type="button" data-p="p4"><span class="dot">4</span><h3>Triangulate</h3><p>Check talk against action</p></button>
+      <button class="pstep" type="button" data-p="p5"><span class="dot">5</span><h3>Find patterns</h3><p>Model interaction sequences</p></button>
+    </div>
+
+    <div class="panels stagger">
+      <div class="panel" id="p1" data-step="0">
+        <div class="ptitle"><span>01</span><h3>Engagement codebook</h3></div>
+        <div class="codes">
+          <button class="crow" type="button" data-k="ack"><span class="code" style="--cur:var(--c-ack)">ACK</span><q>“OK, I'll change it.”</q><small>Active</small></button>
+          <button class="crow" type="button" data-k="diff"><span class="code" style="--cur:var(--c-diff)">DIFF</span><q>“I don't understand why…”</q><small>Active+</small></button>
+          <button class="crow" type="button" data-k="reason"><span class="code" style="--cur:var(--c-reason)">REASON</span><q>“It doesn't support my claim because…”</q><small>Constructive</small></button>
+          <button class="crow" type="button" data-k="eval"><span class="code" style="--cur:var(--c-eval)">EVAL</span><q>“I disagree because…”</q><small>Constructive</small></button>
+        </div>
+        <p class="note">Click a code to see it coded in the demo above. Grounded in L2 feedback engagement and ICAP.</p>
+      </div>
+
+      <div class="panel" id="p2" data-step="1">
+        <div class="ptitle"><span>02</span><h3>Validation</h3></div>
+        <div class="vflow"><div><b>Humans</b>Double-code a sample</div><div><b>Reliability</b>κ and α reported</div><div><b>LLM</b>Tested per category</div></div>
+        <div class="metrics"><span class="metric">Cohen's κ</span><span class="metric">Krippendorff's α</span><span class="metric">Per-code F1</span><span class="metric">Evidence spans</span></div>
+        <p class="note">Low-confidence items go to human review. Codes the LLM can't handle are reported, not hidden.</p>
+      </div>
+
+      <div class="panel" id="p3" data-step="2">
+        <div class="ptitle"><span>03</span><h3>Feedback-to-revision alignment</h3></div>
+        <div class="vflow"><div><b>Where</b>Sentence-level draft alignment</div><div><b>Which</b>Revision linked to its comment</div><div><b>Better?</b>Pairwise before–after</div></div>
+        <div class="metrics"><span class="metric">Addressed</span><span class="metric">Self-initiated</span><span class="metric">Rejected with reason</span><span class="metric">Verbatim AI</span><span class="metric">Adapted</span></div>
+        <p class="note">Benchmarked against an n-gram overlap baseline.</p>
+      </div>
+
+      <div class="panel" id="p4" data-step="3">
+        <div class="ptitle"><span>04</span><h3>Talk × action</h3></div>
+        <div class="matrix" aria-label="What students say by what their revision does">
+          <span class="h"></span><span class="h">Accurate revision</span><span class="h">Weak or none</span>
+          <span class="rh">Brief “OK”</span>
+          <button class="cell good" type="button" aria-pressed="false" data-x="A short reply, but the revision is accurate and in the student's own words. Not counted as low engagement.">Quiet competence</button>
+          <button class="cell warn" type="button" aria-pressed="false" data-x="Accepted without explanation and the revision misses the point. The system asks the student to explain the change.">Surface uptake</button>
+          <span class="rh">Explains</span>
+          <button class="cell good" type="button" aria-pressed="false" data-x="What the student says and what the revision does agree. The strongest evidence of engagement.">Strong evidence</button>
+          <button class="cell warn" type="button" aria-pressed="false" data-x="The student talks a lot but misapplies the feedback. A signal for concept explanation.">Misconception</button>
+        </div>
+        <p class="note" id="mx-note">Talk is evidence of engagement, not a readout of thinking. Click a cell.</p>
+      </div>
+
+      <div class="panel wide" id="p5" data-step="4">
+        <div class="ptitle"><span>05</span><h3>Interaction patterns: what students ask, how AI answers</h3></div>
+        <div class="cols3">
+          <div><b>Student help-seeking</b>
+            <div class="pair"><span><i>Executive</i>Wants the answer</span><span><i>Instrumental</i>Wants to understand</span></div>
+            <div class="mini"><span>Confirm</span><span>Clarify feedback</span><span>Ask for strategy</span><span>Ask for example</span></div></div>
+          <div><b>AI responses</b>
+            <div class="pair"><span><i>Telling</i>Gives the fix</span><span><i>Prompting</i>Asks or hints</span></div>
+            <div class="mini"><span>Help level L0–L5</span><span>Dialogic quality</span></div></div>
+          <div><b>Pattern discovery</b>
+            <div class="mini"><span>Lag sequential analysis</span><span>Epistemic network analysis</span><span>HMM / sequence clustering</span></div>
+            <div class="mini"><span>e.g., dependent</span><span>exploratory</span><span>argumentative</span></div></div>
+        </div>
+        <p class="note">Patterns are then linked to revision quality and learning outcomes.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="t-base pad" id="dashboard">
+  <div class="wrap">
+    <div class="head reveal"><p class="eyebrow">Teacher dashboard</p><h2>Where students struggle, and how they cope</h2><p>Three views of the same interaction data.</p></div>
+    <div class="dash stagger" id="dash">
+      <div class="dcard"><span class="num">CLASS</span><h3>Which feedback gets lost?</h3>
+        <div class="viz" aria-label="Illustrative: share of feedback ignored or misread by type">
+          <div class="hbar"><span>Claim–evidence</span><span class="t"><i style="--v:62%"></i></span><span class="val" data-to="62">62%</span></div>
+          <div class="hbar"><span>Cohesion</span><span class="t"><i style="--v:48%"></i></span><span class="val" data-to="48">48%</span></div>
+          <div class="hbar"><span>Grammar</span><span class="t"><i style="--v:18%"></i></span><span class="val" data-to="18">18%</span></div>
+          <span class="vizcap">Ignored or misread · illustrative</span>
+        </div>
+        <p>Pick mini-lesson topics. See engagement and dependence across the class.</p></div>
+      <div class="dcard"><span class="num">STUDENT</span><h3>Is support fading?</h3>
+        <div class="viz">
+          <svg viewBox="0 0 240 80" role="img" aria-label="Illustrative: support level falls from L4 to L1 over six tasks">
+            <line x1="20" y1="70" x2="232" y2="70" stroke="var(--line)" stroke-width="1"/>
+            <text x="0" y="19" font-size="9" fill="var(--muted)">L4</text><text x="0" y="72" font-size="9" fill="var(--muted)">L0</text>
+            <polyline id="spark" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points="24,16 64,16 104,30 144,43 184,43 228,57"/>
+            <circle id="spark-dot" cx="228" cy="57" r="4" fill="var(--accent)"/>
+          </svg>
+          <span class="vizcap">Support level per skill across tasks · illustrative</span>
+        </div>
+        <p>Support trajectory, dependence trend, and typical exchanges.</p></div>
+      <div class="dcard"><span class="num">FEEDBACK</span><h3>What happened to this comment?</h3>
+        <div class="viz">
+          <div class="journey" id="journey"><span class="lit">Given</span><em>→</em><span class="lit">Questioned</span><em>→</em><span class="lit">Revised</span><em>→</em><span class="lit">Improved</span></div>
+          <q>“The survey asked teachers, not students…”</q>
+          <span class="vizcap">Every step links to the student's own words</span>
+        </div>
+        <p>The full journey of one comment, with evidence.</p></div>
+    </div>
+    <div class="principles reveal"><span>Evidence quote for every claim</span><span>Teachers can override codes</span><span>Actionable suggestions</span><span>No rankings, no grading</span></div>
+  </div>
+</section>
+
+<section class="t-sage pad" id="contributions">
+  <div class="wrap">
+    <div class="head reveal"><p class="eyebrow">Contributions</p><h2>What this project adds</h2></div>
+    <div class="grid3 stagger">
+      <div class="card"><span class="bar"></span><span class="num">MEASUREMENT</span><h3>A validated engagement codebook</h3><p>Automated coding of interaction logs, tested for transfer from university EFL to secondary learners.</p></div>
+      <div class="card"><span class="bar"></span><span class="num">METHOD</span><h3>Alignment for dialogic feedback</h3><p>Feedback turn to revision, copying vs. adapting. Beyond n-gram overlap and one-way systems like eRevise.</p></div>
+      <div class="card"><span class="bar"></span><span class="num">EMPIRICAL</span><h3>Peer vs. AI, same learners</h3><p>A direct human–human vs. human–AI comparison on one draft.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="t-cream pad" id="next">
+  <div class="wrap">
+    <div class="head reveal"><p class="eyebrow">Next phase</p><h2>Adaptive scaffolding that fades</h2><p>A learner model picks the level of help. The LLM only words it. Try the rule below.</p></div>
+    <div class="sim">
+      <div class="controls reveal">
+        <div>
+          <label for="acc">Accurate explanations in a row: <output id="acc-out" for="acc">1</output></label>
+          <input type="range" id="acc" min="0" max="4" step="1" value="1">
+        </div>
+        <label class="check" for="weak"><input type="checkbox" id="weak"> Last revision missed the feedback</label>
+        <label class="check" for="ok"><input type="checkbox" id="ok"> Accepted everything without explaining</label>
+        <div class="decision" id="decision" aria-live="polite"></div>
+      </div>
+      <div class="ladder" id="ladder" aria-label="Levels of help, from none to most explicit">
+        <div class="rung" data-l="0"><b>L0</b><div style="--w:8%"><span>No intervention</span></div></div>
+        <div class="rung" data-l="1"><b>L1</b><div style="--w:24%"><span>Metacognitive prompt <em>· “Does each sentence support your claim?”</em></span></div></div>
+        <div class="rung" data-l="2"><b>L2</b><div style="--w:40%"><span>Locate <em>· “Look at sentences 2 and 3.”</em></span></div></div>
+        <div class="rung" data-l="3"><b>L3</b><div style="--w:56%"><span>Strategy hint <em>· “Explain how the evidence proves it.”</em></span></div></div>
+        <div class="rung" data-l="4"><b>L4</b><div style="--w:74%"><span>Concept explanation or contrasting examples</span></div></div>
+        <div class="rung" data-l="5"><b>L5</b><div style="--w:94%"><span>Modelled revision, then explain it</span></div></div>
+      </div>
+    </div>
+    <div class="rules reveal"><span class="tag" style="background:var(--sage)"><b>Help types</b> concept · strategy · metacognitive</span><span class="tag" style="background:var(--sage)"><b>Step up</b> after weak uptake</span><span class="tag" style="background:var(--sage)"><b>Fade</b> after 3 accurate explanations</span></div>
+    <p class="small reveal" style="text-align:center; margin-top:14px">Planned test: adaptive vs. fixed vs. no scaffolding · outcomes: revision quality, transfer, independence</p>
+  </div>
+</section>
+
+<section class="t-mint pad" id="partner">
+  <div class="wrap">
+    <div class="head reveal"><p class="eyebrow">Partner with us</p><h2>Looking for English teachers and programme leads</h2><p>Secondary school to university. One class and one writing task is enough.</p></div>
+    <div class="grid3 stagger">
+      <div class="card"><span class="bar"></span><h3>What it involves</h3><ul><li>One writing cycle, 2–3 lessons</li><li>Task chosen with you</li><li>All materials provided</li></ul></div>
+      <div class="card"><span class="bar"></span><h3>What you get</h3><ul><li>Anonymised class report</li><li>Teaching examples of uptake</li><li>Teacher workshop</li></ul></div>
+      <div class="card"><span class="bar"></span><h3>Safeguards</h3><ul><li>Ethics and school approval first</li><li>Consent; parent consent for minors</li><li>Never graded, de-identified data</li></ul></div>
+    </div>
+
+    <div class="formbox reveal">
+      <h3>Express interest</h3>
+      <p>Fill in the form, then copy the message and send it to Rachel Zhao.</p>
+      <form id="interest" novalidate>
+        <div><label for="f-name">Name</label><input id="f-name" name="name" autocomplete="name"></div>
+        <div><label for="f-email">Email</label><input id="f-email" name="email" type="email" autocomplete="email"></div>
+        <div><label for="f-inst">Institution</label><input id="f-inst" name="institution" autocomplete="organization"></div>
+        <div><label for="f-level">Level</label><select id="f-level" name="level"><option>Secondary school</option><option>University / EAP</option><option>Language centre</option><option>Other</option></select></div>
+        <div class="full"><label for="f-msg">Class size, preferred term, questions</label><textarea id="f-msg" name="message"></textarea></div>
+        <div class="full"><button class="btn solid" type="submit">Prepare my message <span class="arr">→</span></button></div>
+        <p class="small full" id="form-error" role="alert" hidden></p>
+        <div class="result" id="result" hidden>
+          <pre id="summary"></pre>
+          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap"><button class="btn line" type="button" id="copy">Copy message</button><span class="small" id="copy-status" aria-live="polite"></span></div>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="pad">
+  <div class="wrap">
+    <div>
+      <h3>Feedback Paths</h3>
+      <p>Rachel Zhao · Master's research at Stanford University.</p>
+      <p>Builds on prior work in discourse coding and engagement classification in Math Out Loud (Stanford GSE).</p>
+    </div>
+    <details>
+      <summary>Selected references</summary>
+      <ol>
+        <li>Aljaafreh &amp; Lantolf (1994). <i>Modern Language Journal</i>.</li>
+        <li>Beck &amp; Jones (2023). <i>Teaching and Teacher Education</i>.</li>
+        <li>Chi &amp; Wylie (2014). ICAP. <i>Educational Psychologist</i>.</li>
+        <li>Ellis (2010). <i>Studies in Second Language Acquisition</i>.</li>
+        <li>Han &amp; Hyland (2015). <i>Journal of Second Language Writing</i>.</li>
+        <li>Han et al. (2024). RECIPE4U. arXiv.</li>
+        <li>Levine et al. (2024). <i>Journal of Adolescent &amp; Adult Literacy</i>.</li>
+        <li>Sharma, Pea &amp; Subramonyam (2026). ConvoLearn. arXiv.</li>
+        <li>Waring &amp; Lee (2026). <i>Research Methods in Applied Linguistics</i>.</li>
+        <li>Zhang &amp; Hyland (2018). <i>Assessing Writing</i>.</li>
+      </ol>
+    </details>
+  </div>
+  <div class="wrap copy">Example data on this page are illustrative.</div>
+</footer>
+
+<script>
+(function(){
+  var RM = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function anim(el, frames, opts){ if (RM || !el.animate) return null; try { return el.animate(frames, opts); } catch(e){ return null; } }
+
+  /* ---------- nav: progress, shadow, active link ---------- */
+  var nav = document.getElementById('nav'), prog = document.getElementById('progress');
+  function onScroll(){
+    var h = document.documentElement, max = h.scrollHeight - h.clientHeight;
+    prog.style.transform = 'scaleX(' + (max > 0 ? Math.min(1, h.scrollTop / max) : 0) + ')';
+    nav.classList.toggle('scrolled', h.scrollTop > 8);
+  }
+  window.addEventListener('scroll', onScroll, {passive:true}); onScroll();
+  var links = {};
+  Array.prototype.forEach.call(document.querySelectorAll('.navlinks a.l'), function(a){ links[a.getAttribute('href').slice(1)] = a; });
+  if ('IntersectionObserver' in window){
+    var navObs = new IntersectionObserver(function(es){
+      es.forEach(function(e){ if (e.isIntersecting && links[e.target.id]){ Object.keys(links).forEach(function(k){ links[k].classList.remove('on'); }); links[e.target.id].classList.add('on'); } });
+    }, {rootMargin:'-45% 0px -50% 0px'});
+    Object.keys(links).forEach(function(id){ var s = document.getElementById(id); if (s) navObs.observe(s); });
+  }
+
+  /* ---------- hero load sequence (content is visible without it) ---------- */
+  Array.prototype.forEach.call(document.querySelectorAll('.hero .intro > *'), function(el, i){
+    anim(el, [{opacity:0, transform:'translateY(18px)'}, {opacity:1, transform:'none'}], {duration:700, delay:80 + i*110, easing:'cubic-bezier(.2,.7,.2,1)', fill:'backwards'});
+  });
+  var hl = document.querySelector('.hero h1 .hl');
+  if (hl) anim(hl, [{backgroundSize:'0% 100%'}, {backgroundSize:'100% 100%'}], {duration:800, delay:700, easing:'ease-out', fill:'backwards'});
+  anim(document.getElementById('spec'), [{opacity:0, transform:'translateY(24px) scale(.98)'}, {opacity:1, transform:'none'}], {duration:800, delay:250, easing:'cubic-bezier(.2,.7,.2,1)', fill:'backwards'});
+
+  /* ---------- specimen ---------- */
+  var C = {ack:"var(--c-ack)", diff:"var(--c-diff)", reason:"var(--c-reason)", eval:"var(--c-eval)"};
+  var D = {
+    ack:{rev:'…70% of teachers prefer online tools. <ins>This shows online classes are better.</ins>', tags:[["Addressed","partly"],["Improved","no"],["Wording","copied from AI"]]},
+    diff:{rev:'<span style="color:var(--muted)">No revision yet → L2 prompt:</span> <ins>“Who did the survey ask, and who is your claim about?”</ins>', tags:[["Scaffold","triggered"],["Revision","pending"]]},
+    reason:{rev:'Online <del>classes are better for students</del> <ins>tools make lessons more flexible</ins>. …70% of teachers prefer them<ins>, mainly to save planning time</ins>.', tags:[["Addressed","yes"],["Improved","yes"],["Wording","own"]]},
+    eval:{rev:'<span style="color:var(--muted)">No change.</span> The original still argues about students from teacher data.', tags:[["Rejected","with reason"],["Warranted","no"]]}
+  };
+  var order = ['ack','diff','reason','eval'];
+  var picks = Array.prototype.slice.call(document.querySelectorAll('.pick'));
+  var out = document.getElementById('out');
+  picks.forEach(function(p){ p.style.setProperty('--cur', C[p.dataset.k]); });
+  var cur = 'ack', playing = !RM, timerAnim = null, cycle = null;
+  var apBtn = document.getElementById('autoplay');
+  function show(k){
+    cur = k;
+    picks.forEach(function(p){ var on = p.dataset.k===k; p.setAttribute('aria-selected', on?'true':'false'); p.tabIndex = on?0:-1; });
+    var d = D[k];
+    out.classList.remove('animate'); void out.offsetWidth;
+    out.innerHTML = '<div class="msg"><span class="lbl">Revision</span>'+d.rev+'</div><div class="outcome">'+d.tags.map(function(t){return '<span class="tag">'+t[0]+': <b>'+t[1]+'</b></span>';}).join('')+'</div>';
+    if (!RM) out.classList.add('animate');
+    if (playing) runTimer();
+  }
+  function runTimer(){
+    if (timerAnim) timerAnim.cancel();
+    clearTimeout(cycle);
+    var bar = document.querySelector('.pick[data-k="'+cur+'"] .timer');
+    picks.forEach(function(p){ p.querySelector('.timer').style.transform = 'scaleX(0)'; });
+    timerAnim = anim(bar, [{transform:'scaleX(0)'}, {transform:'scaleX(1)'}], {duration:4200, easing:'linear'});
+    cycle = setTimeout(function(){ show(order[(order.indexOf(cur)+1) % order.length]); }, 4200);
+  }
+  function stop(){ playing = false; clearTimeout(cycle); if (timerAnim) timerAnim.cancel(); apBtn.textContent = 'Play demo'; apBtn.setAttribute('aria-pressed','false'); }
+  function start(){ if (RM) return; playing = true; apBtn.textContent = 'Pause demo'; apBtn.setAttribute('aria-pressed','true'); runTimer(); }
+  apBtn.addEventListener('click', function(){ playing ? stop() : start(); });
+  if (RM){ apBtn.textContent = 'Play demo'; apBtn.setAttribute('aria-pressed','false'); }
+  picks.forEach(function(p,i){
+    p.addEventListener('click', function(){ stop(); show(p.dataset.k); });
+    p.addEventListener('keydown', function(e){
+      var j = null;
+      if (e.key==='ArrowRight'||e.key==='ArrowDown') j=(i+1)%picks.length;
+      if (e.key==='ArrowLeft'||e.key==='ArrowUp') j=(i-1+picks.length)%picks.length;
+      if (j!==null){ e.preventDefault(); stop(); picks[j].focus(); show(picks[j].dataset.k); }
+    });
+  });
+  show('ack');
+
+  /* gentle tilt on the specimen */
+  var spec = document.getElementById('spec');
+  if (!RM && window.matchMedia('(hover: hover)').matches){
+    spec.addEventListener('mousemove', function(e){
+      var r = spec.getBoundingClientRect(), x = (e.clientX - r.left)/r.width - .5, y = (e.clientY - r.top)/r.height - .5;
+      spec.style.transform = 'perspective(900px) rotateY(' + (x*5) + 'deg) rotateX(' + (-y*5) + 'deg)';
+    });
+    spec.addEventListener('mouseleave', function(){ spec.style.transform = ''; });
+  }
+
+  /* ---------- card spotlight ---------- */
+  Array.prototype.forEach.call(document.querySelectorAll('.card'), function(c){
+    c.addEventListener('pointermove', function(e){ var r = c.getBoundingClientRect(); c.style.setProperty('--mx', (e.clientX-r.left)+'px'); c.style.setProperty('--my', (e.clientY-r.top)+'px'); });
+  });
+
+  /* ---------- reveal on scroll (elements stay visible if this never runs) ---------- */
+  function reveal(el, delay){ anim(el, [{opacity:0, transform:'translateY(22px)'}, {opacity:1, transform:'none'}], {duration:650, delay:delay||0, easing:'cubic-bezier(.2,.7,.2,1)', fill:'backwards'}); }
+  var onceMap = new Map();
+  function once(el, fn){ onceMap.set(el, fn); if (io) io.observe(el); }
+  var io = ('IntersectionObserver' in window && !RM) ? new IntersectionObserver(function(es){
+    es.forEach(function(e){
+      if (!e.isIntersecting) return;
+      var r = e.boundingClientRect;
+      io.unobserve(e.target);
+      var fn = onceMap.get(e.target);
+      if (fn && r.top > window.innerHeight * 0.15) fn();
+    });
+  }, {threshold:0.15}) : null;
+  if (io){
+    Array.prototype.forEach.call(document.querySelectorAll('.reveal'), function(el){ once(el, function(){ reveal(el); }); });
+    Array.prototype.forEach.call(document.querySelectorAll('.stagger'), function(g){
+      once(g, function(){ Array.prototype.forEach.call(g.children, function(ch, i){ reveal(ch, i*110); }); });
+    });
+
+    /* pipeline track fill */
+    var pipe = document.getElementById('pipeline'), track = document.getElementById('track');
+    once(pipe, function(){
+      anim(track, [{transform:'scaleX(0)'}, {transform:'scaleX(1)'}], {duration:1400, easing:'cubic-bezier(.4,0,.2,1)', fill:'backwards'});
+      Array.prototype.forEach.call(pipe.querySelectorAll('.dot'), function(d, i){
+        anim(d, [{transform:'scale(.4)', opacity:.3}, {transform:'scale(1.2)', opacity:1, offset:.7}, {transform:'scale(1)', opacity:1}], {duration:500, delay:i*260, easing:'ease-out', fill:'backwards'});
+      });
+    });
+
+    /* dashboard */
+    var dash = document.getElementById('dash');
+    once(dash, function(){
+      Array.prototype.forEach.call(dash.querySelectorAll('.hbar .t i'), function(b, i){
+        anim(b, [{transform:'scaleX(0)'}, {transform:'scaleX(1)'}], {duration:1000, delay:200 + i*150, easing:'cubic-bezier(.2,.7,.2,1)', fill:'backwards'});
+      });
+      Array.prototype.forEach.call(dash.querySelectorAll('.val'), function(v, i){
+        var to = +v.dataset.to, t0 = null, delay = 200 + i*150;
+        function step(ts){ if (!t0) t0 = ts; var p = Math.min(1, (ts - t0 - delay)/1000); if (p >= 0) v.textContent = Math.round(to * (1 - Math.pow(1-p, 3))) + '%'; if (p < 1) requestAnimationFrame(step); else v.textContent = to + '%'; }
+        v.textContent = '0%'; requestAnimationFrame(step);
+      });
+      var sp = document.getElementById('spark');
+      if (sp && sp.getTotalLength){
+        var L = sp.getTotalLength();
+        sp.style.strokeDasharray = L;
+        anim(sp, [{strokeDashoffset:L}, {strokeDashoffset:0}], {duration:1400, delay:300, easing:'ease-in-out', fill:'backwards'});
+        anim(document.getElementById('spark-dot'), [{opacity:0, transform:'scale(0)'}, {opacity:1, transform:'scale(1)'}], {duration:300, delay:1650, fill:'backwards'});
+      }
+      var js = document.querySelectorAll('#journey span');
+      Array.prototype.forEach.call(js, function(s){ s.classList.remove('lit'); });
+      Array.prototype.forEach.call(js, function(s, i){ setTimeout(function(){ s.classList.add('lit'); }, 400 + i*420); });
+    });
+  }
+
+  /* ---------- pipeline ↔ panels ---------- */
+  var steps = Array.prototype.slice.call(document.querySelectorAll('.pstep'));
+  var panels = Array.prototype.slice.call(document.querySelectorAll('.panel'));
+  function flash(panel){ panel.classList.add('flash'); setTimeout(function(){ panel.classList.remove('flash'); }, 1400); }
+  steps.forEach(function(s){
+    s.addEventListener('click', function(){
+      var p = document.getElementById(s.dataset.p);
+      p.scrollIntoView({behavior: RM ? 'auto' : 'smooth', block:'center'});
+      flash(p);
+    });
+  });
+  panels.forEach(function(p){
+    var i = +p.dataset.step;
+    p.addEventListener('mouseenter', function(){ steps.forEach(function(s, j){ s.classList.toggle('on', j===i); }); });
+    p.addEventListener('mouseleave', function(){ steps.forEach(function(s){ s.classList.remove('on'); }); });
+  });
+
+  /* codebook rows drive the hero demo */
+  Array.prototype.forEach.call(document.querySelectorAll('.crow'), function(r){
+    r.addEventListener('click', function(){
+      stop(); show(r.dataset.k);
+      spec.scrollIntoView({behavior: RM ? 'auto' : 'smooth', block:'center'});
+      anim(spec, [{boxShadow:'0 0 0 0 var(--lime)'}, {boxShadow:'0 0 0 10px transparent'}], {duration:900, delay:500});
+    });
+  });
+
+  /* matrix cells */
+  var mxNote = document.getElementById('mx-note');
+  var cells = Array.prototype.slice.call(document.querySelectorAll('.cell'));
+  cells.forEach(function(c){
+    c.addEventListener('click', function(){
+      var on = c.getAttribute('aria-pressed') !== 'true';
+      cells.forEach(function(x){ x.setAttribute('aria-pressed','false'); });
+      c.setAttribute('aria-pressed', on ? 'true' : 'false');
+      mxNote.textContent = on ? c.dataset.x : 'Talk is evidence of engagement, not a readout of thinking. Click a cell.';
+      anim(mxNote, [{opacity:.2, transform:'translateY(4px)'}, {opacity:1, transform:'none'}], {duration:300});
+    });
+  });
+
+  /* ---------- scaffolding simulator ---------- */
+  var acc = document.getElementById('acc'), accOut = document.getElementById('acc-out');
+  var weak = document.getElementById('weak'), okc = document.getElementById('ok'), dec = document.getElementById('decision');
+  var rungs = Array.prototype.slice.call(document.querySelectorAll('.rung'));
+  var names = ['No intervention','Metacognitive prompt','Locate the problem','Strategy hint','Concept explanation or contrasting examples','Modelled revision'];
+  function decide(){
+    var a = +acc.value; accOut.textContent = a;
+    var lvl = 3 - a;
+    if (weak.checked) lvl += 2;
+    if (okc.checked) lvl = Math.max(lvl, 1) + 1;
+    lvl = Math.max(0, Math.min(5, lvl));
+    rungs.forEach(function(r){ r.classList.toggle('on', +r.dataset.l === lvl); });
+    var why = [];
+    if (a >= 3) why.push('three or more accurate explanations, so support fades');
+    else if (a > 0) why.push(a + ' accurate explanation' + (a>1?'s':'') + ' so far');
+    else why.push('no accurate explanation yet');
+    if (weak.checked) why.push('the last revision missed the feedback, so support steps up');
+    if (okc.checked) why.push('everything was accepted silently, so the coach asks the student to explain');
+    dec.innerHTML = '<b>L' + lvl + ' · ' + names[lvl] + '</b><br>Because ' + why.join('; ') + '.';
+  }
+  [acc, weak, okc].forEach(function(el){ el.addEventListener('input', decide); el.addEventListener('change', decide); });
+  decide();
+
+  /* ---------- form ---------- */
+  var form = document.getElementById('interest'), res = document.getElementById('result'), sum = document.getElementById('summary'), err = document.getElementById('form-error');
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    var f = form.elements, miss = [];
+    if (!f.name.value.trim()) miss.push('name');
+    if (!/^\S+@\S+\.\S+$/.test(f.email.value.trim())) miss.push('a valid email');
+    if (!f.institution.value.trim()) miss.push('institution');
+    if (miss.length){ err.hidden=false; err.textContent='Please add your '+miss.join(', ')+'.'; res.hidden=true; return; }
+    err.hidden = true;
+    sum.textContent = 'Subject: Feedback Paths – expression of interest\n\nName: '+f.name.value.trim()+'\nEmail: '+f.email.value.trim()+'\nInstitution: '+f.institution.value.trim()+'\nLevel: '+f.level.value+(f.message.value.trim()?'\n\n'+f.message.value.trim():'');
+    res.hidden = false; document.getElementById('copy-status').textContent='';
+    anim(res, [{opacity:0, transform:'translateY(10px)'}, {opacity:1, transform:'none'}], {duration:400, easing:'ease-out'});
+  });
+  document.getElementById('copy').addEventListener('click', function(){
+    var st = document.getElementById('copy-status');
+    function fb(){ var r=document.createRange(); r.selectNodeContents(sum); var s=window.getSelection(); s.removeAllRanges(); s.addRange(r); st.textContent='Selected. Press Ctrl+C or Cmd+C.'; }
+    try { navigator.clipboard.writeText(sum.textContent).then(function(){ st.textContent='Copied.'; }, fb); } catch(e){ fb(); }
+  });
+})();
+</script>
+</body>
+</html>
